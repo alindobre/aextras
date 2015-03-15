@@ -1,0 +1,44 @@
+#!/bin/bash -e
+
+${DEBUG:+set -x}
+set -a
+SYSROOT=/mnt/chroot
+TOOLS=/tools
+TARGET=x86_64-bootstrap-linux-gnu
+ACONF=$SYSROOT/etc/abuild.conf
+CACHE=$SYSROOT/var/cache/abuild
+PATH=$TOOLS/bin:/home/alin/.local/bin:/home/alin/bin:/bin:/usr/bin
+set +a
+
+PACKAGES=/home/alin/work/packages/bootstrap
+
+mkdir -pv $SYSROOT/etc $SYSROOT/var/cache/abuild $SYSROOT/tmp
+cat >$ACONF <<EOF
+CBUILD=$TARGET
+EOF
+
+test_compile() {
+  return
+  echo 'main(){}' > dummy.c
+  $TARGET-gcc dummy.c
+  readelf -l a.out | grep ": $TOOLS"
+}
+
+cat > /tmp/bashrc.debug <<BASHRC
+echo "You are inside a debug shell"
+export PS1="abootstrap-debug-shell> "
+export HISTFILE=/tmp/shell_history
+BASHRC
+
+debugsh() {
+  /bin/bash --rcfile /tmp/bashrc.debug -i
+}
+trap debugsh ERR
+
+atool $SYSROOT $PACKAGES binutils1 gcc1 linux-headers glibc
+test_compile
+atool $SYSROOT $PACKAGES libstdc++ binutils2 gcc2
+test_compile
+atool $SYSROOT $PACKAGES ncurses bash bzip2 coreutils diffutils file findutils \
+                         gawk grep gzip m4 make patch sed tar util-linux xz \
+                         openssl

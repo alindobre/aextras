@@ -1,0 +1,12 @@
+#!/bin/bash -e
+
+# usage: atool /install/path /packages/path <packages list>
+INSTALL=$1
+PKG=$2
+shift 2
+for P in $@; do
+	[ -s $INSTALL/tmp/$P ] && continue
+	rm -rf $INSTALL/tmp/$P
+	pseudo abuild $PKG/$P $INSTALL/tmp/$P
+	rsync -avH $INSTALL/tmp/$P/ $INSTALL/
+done
